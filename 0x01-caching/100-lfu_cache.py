@@ -1,40 +1,66 @@
 #!/usr/bin/env python3
-"""
-    This Module contains the LFUCache thats a caching system
-    Author: Peter Ekwere
+""" BaseCaching module
 """
 from base_caching import BaseCaching
 
 
 class LFUCache(BaseCaching):
-    """ MRUCache system
+    """
+    FIFOCache defines a FIFO caching system
     """
 
     def __init__(self):
-        self.keys_count = {}
+        """
+        Initialize the class with the parent's init method
+        """
         super().__init__()
+        self.usage = []
+        self.frequency = {}
 
     def put(self, key, item):
-        """ updates cache_data with the key and item
-
-        Args:
-            key (_type_): cache key
-            item (_type_): cache value
         """
-        if key and item:
-            if self.get(key) != item:
-                self.cache_data[key] = item
-                if len(self.cache_data) > BaseCaching.MAX_ITEMS:
-                    k = min(self.keys_count, key=self.keys_count.get)
-                    self.cache_data.pop(k)
-                    print('DISCARD:', k)
-                    self.keys_count.pop(k)
-                if key not in self.keys_count:
-                    self.keys_count[key] = 0
+        Cache a key-value pair
+        """
+        if key is None or item is None:
+            pass
+        else:
+            length = len(self.cache_data)
+            if length >= BaseCaching.MAX_ITEMS and key not in self.cache_data:
+                lfu = min(self.frequency.values())
+                lfu_keys = []
+                for k, v in self.frequency.items():
+                    if v == lfu:
+                        lfu_keys.append(k)
+                if len(lfu_keys) > 1:
+                    lru_lfu = {}
+                    for k in lfu_keys:
+                        lru_lfu[k] = self.usage.index(k)
+                    discard = min(lru_lfu.values())
+                    discard = self.usage[discard]
+                else:
+                    discard = lfu_keys[0]
+
+                print("DISCARD: {}".format(discard))
+                del self.cache_data[discard]
+                del self.usage[self.usage.index(discard)]
+                del self.frequency[discard]
+            # update usage frequency
+            if key in self.frequency:
+                self.frequency[key] += 1
+            else:
+                self.frequency[key] = 1
+            if key in self.usage:
+                del self.usage[self.usage.index(key)]
+            self.usage.append(key)
+            self.cache_data[key] = item
 
     def get(self, key):
-        """Retrieves an item from the cache."""
-        value = self.cache_data.get(key, None)
-        if value:
-            self.keys[key] += 1
-        return value
+        """
+        Return the value linked to a given key, or None
+        """
+        if key is not None and key in self.cache_data.keys():
+            del self.usage[self.usage.index(key)]
+            self.usage.append(key)
+            self.frequency[key] += 1
+            return self.cache_data[key]
+        return None
